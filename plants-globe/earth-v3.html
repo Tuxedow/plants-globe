@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球植物分布 - 进阶版 v3</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; position: relative; }
+        
+        /* 标题 */
+        #title { 
+            position: absolute; top: 24px; left: 50%; transform: translateX(-50%); 
+            color: white; font-size: 32px; font-weight: 200; letter-spacing: 4px; 
+            z-index: 100; text-shadow: 0 2px 30px rgba(0,0,0,0.8); 
+            font-family: 'Helvetica Neue', sans-serif;
+        }
+        #subtitle { 
+            position: absolute; top: 68px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.5); font-size: 12px; letter-spacing: 2px;
+            z-index: 100; text-transform: uppercase;
+        }
+        
+        /* 筛选面板 */
+        #filters { 
+            position: absolute; top: 110px; left: 24px; 
+            background: rgba(15,20,30,0.92); padding: 24px; border-radius: 20px; 
+            color: white; z-index: 100; min-width: 240px; 
+            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        #filters h3 { margin: 0 0 20px 0; font-size: 14px; color: #4CAF50; font-weight: 500; letter-spacing: 1px; }
+        .filter-group { margin-bottom: 18px; }
+        .filter-group label { display: block; margin-bottom: 10px; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; }
+        .filter-group select { 
+            width: 100%; padding: 12px 16px; background: rgba(30,40,55,0.9); 
+            border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; 
+            cursor: pointer; font-size: 14px; transition: all 0.3s;
+        }
+        .filter-group select:hover { border-color: #4CAF50; background: rgba(40,50,65,0.9); }
+        
+        /* 统计 */
+        #stats { 
+            position: absolute; bottom: 30px; left: 24px; 
+            background: rgba(15,20,30,0.92); padding: 20px 28px; border-radius: 16px; 
+            color: white; z-index: 100; backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255,255,255,0.08);
+            display: flex; gap: 30px;
+        }
+        #stats .stat-item { text-align: center; }
+        #stats .stat-value { font-size: 28px; font-weight: 600; color: #4CAF50; }
+        #stats .stat-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+        
+        /* 弹窗详情 */
+        #detail-panel {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(10,15,25,0.97); border-radius: 24px; 
+            color: white; z-index: 300; min-width: 380px; max-width: 420px;
+            backdrop-filter: blur(30px); border: 1px solid rgba(76,175,80,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 80px rgba(76,175,80,0.1);
+            display: none; overflow: hidden;
+        }
+        #detail-panel.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity:0; transform:translate(-50%,-48%); } to { opacity:1; transform:translate(-50%,-50%); } }
+        
+        .detail-header { 
+            background: linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.05)); 
+            padding: 28px 28px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+            position: relative;
+        }
+        .detail-header h2 { font-size: 26px; font-weight: 400; color: #4CAF50; margin-bottom: 4px; }
+        .detail-header .scientific { font-size: 14px; color: rgba(255,255,255,0.5); font-style: italic; }
+        .detail-close { 
+            position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; 
+            background: rgba(255,255,255,0.1); border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 20px; color: #666;
+            transition: all 0.3s;
+        }
+        .detail-close:hover { background: rgba(255,255,255,0.2); color: white; }
+        
+        .detail-body { padding: 24px 28px; }
+        .detail-row { display: flex; margin-bottom: 16px; align-items: flex-start; }
+        .detail-row .label { min-width: 60px; font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+        .detail-row .value { font-size: 15px; color: white; flex: 1; }
+        .detail-row .value.type-tag { 
+            display: inline-block; padding: 4px 12px; background: rgba(76,175,80,0.2); 
+            border-radius: 20px; font-size: 13px; color: #4CAF50; 
+        }
+        
+        .detail-feature { 
+            margin-top: 20px; padding: 16px; background: rgba(255,255,255,0.03); 
+            border-radius: 12px; border-left: 3px solid #4CAF50;
+        }
+        .detail-feature .label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .detail-feature .text { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.6; }
+        
+        /* 图例 */
+        #legend { 
+            position: absolute; bottom: 30px; right: 24px; 
+            background: rgba(15,20,30,0.92); padding: 20px 24px; border-radius: 16px; 
+            color: white; z-index: 100; backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        #legend h4 { margin: 0 0 16px 0; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; }
+        .legend-item { display: flex; align-items: center; margin: 10px 0; font-size: 13px; }
+        .legend-dot { 
+            width: 12px; height: 12px; border-radius: 50%; margin-right: 12px; 
+            box-shadow: 0 0 12px currentColor;
+        }
+        
+        /* 控制提示 */
+        #hint {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.35); font-size: 12px; z-index: 100;
+            display: flex; gap: 24px;
+        }
+        #hint span { display: flex; align-items: center; gap: 6px; }
+        
+        /* 加载 */
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #4CAF50; font-size: 16px; z-index: 300;
+            display: flex; flex-direction: column; align-items: center; gap: 16px;
+        }
+        .spinner { width: 36px; height: 36px; border: 2px solid rgba(76,175,80,0.2); border-top-color: #4CAF50; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <div id="title">🌍 全球植物分布</div>
+        <div id="subtitle">Interactive World Plant Atlas</div>
+        
+        <div id="loading"><div class="spinner"></div><span>加载中...</span></div>
+        
+        <div id="filters">
+            <h3>🔍 筛选条件</h3>
+            <div class="filter-group">
+                <label>植物类型</label>
+                <select id="typeFilter">
+                    <option value="all">全部类型</option>
+                    <option value="花卉">🌸 花卉</option>
+                    <option value="乔木">🌲 乔木</option>
+                    <option value="灌木">🌿 灌木</option>
+                    <option value="多肉">🌵 多肉</option>
+                    <option value="草本">🌾 草本</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>气候类型</label>
+                <select id="climateFilter">
+                    <option value="all">全部气候</option>
+                    <option value="温带">🌡️ 温带</option>
+                    <option value="热带">🔥 热带</option>
+                    <option value="亚热带">🌴 亚热带</option>
+                    <option value="地中海">🌊 地中海</option>
+                    <option value="干旱">🏜️ 干旱</option>
+                    <option value="寒带">❄️ 寒带</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>国家/地区</label>
+                <select id="countryFilter">
+                    <option value="all">全部国家</option>
+                    <option value="中国">🇨🇳 中国</option>
+                    <option value="美国">🇺🇸 美国</option>
+                    <option value="日本">🇯🇵 日本</option>
+                    <option value="法国">🇫🇷 法国</option>
+                    <option value="墨西哥">🇲🇽 墨西哥</option>
+                    <option value="巴西">🇧🇷 巴西</option>
+                    <option value="南非">🇿🇦 南非</option>
+                    <option value="澳大利亚">🇦🇺 澳大利亚</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="stats">
+            <div class="stat-item"><div class="stat-value" id="totalCount">0</div><div class="stat-label">植物总数</div></div>
+            <div class="stat-item"><div class="stat-value" id="showCount">0</div><div class="stat-label">显示数量</div></div>
+            <div class="stat-item"><div class="stat-value" id="countryCount">0</div><div class="stat-label">国家数量</div></div>
+        </div>
+        
+        <div id="legend">
+            <h4>类型图例</h4>
+            <div class="legend-item"><div class="legend-dot" style="background:#FF6B6B;color:#FF6B6B;"></div>花卉</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#4CAF50;color:#4CAF50;"></div>乔木</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#FFB347;color:#FFB347;"></div>灌木</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#87CEEB;color:#87CEEB;"></div>多肉</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#DDA0DD;color:#DDA0DD;"></div>草本</div>
+        </div>
+        
+        <div id="hint">
+            <span>🖱️ 左键拖拽旋转</span>
+            <span>🖱️ 滚轮缩放</span>
+            <span>👆 点击查看详情</span>
+        </div>
+        
+        <!-- 详情弹窗 -->
+        <div id="detail-panel">
+            <div class="detail-header">
+                <h2 id="detailName">植物名称</h2>
+                <div class="scientific" id="detailScientific">学名</div>
+                <div class="detail-close" onclick="closeDetail()">×</div>
+            </div>
+            <div class="detail-body">
+                <div class="detail-row">
+                    <div class="label">类型</div>
+                    <div class="value"><span class="type-tag" id="detailType">类型</span></div>
+                </div>
+                <div class="detail-row">
+                    <div class="label">气候</div>
+                    <div class="value" id="detailClimate">气候</div>
+                </div>
+                <div class="detail-row">
+                    <div class="label">分布</div>
+                    <div class="value" id="detailCountry">国家</div>
+                </div>
+                <div class="detail-row">
+                    <div class="label">位置</div>
+                    <div class="value" id="detailLocation">经纬度</div>
+                </div>
+                <div class="detail-feature">
+                    <div class="label">特征描述</div>
+                    <div class="text" id="detailFeature">特征</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+    <script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// 植物数据库
+const plantsData = [
+// 中国 - 30种
+{name:"桂花",scientific:"Osmanthus fragrans",type:"乔木",climate:"温带",country:"中国",lat:35.86,lon:104.19,feature:"中国传统十大名花，花香浓郁，四季常绿。"},
+{name:"牡丹",scientific:"Paeonia suffruticosa",type:"灌木",climate:"温带",country:"中国",lat:34.74,lon:113.62,feature:"中国国花，被誉为花中之王，雍容华贵。"},
+{name:"梅花",scientific:"Prunus mume",type:"乔木",climate:"温带",country:"中国",lat:34.34,lon:108.94,feature:"岁寒三友之一象征坚韧不拔的精神。"},
+{name:"兰花",scientific:"Cymbidium",type:"草本",climate:"亚热带",country:"中国",lat:30.57,lon:114.30,feature:"中国十大名花之首，象征高洁典雅。"},
+{name:"菊花",scientific:"Chrysanthemum morifolium",type:"草本",climate:"温带",country:"中国",lat:39.90,lon:116.41,feature:"四君子之一，深受文人墨客喜爱。"},
+{name:"杜鹃",scientific:"Rhododendron simsii",type:"灌木",climate:"亚热带",country:"中国",lat:27.83,lon:112.94,feature:"世界四大高山花卉，品种繁多。"},
+{name:"荷花",scientific:"Nelumbo nucifera",type:"草本",climate:"温带",country:"中国",lat:30.57,lon:114.30,feature:"出淤泥而不染，象征纯洁高尚。"},
+{name:"竹子",scientific:"Bambusoideae",type:"乔木",climate:"亚热带",country:"中国",lat:29.56,lon:106.55,feature:"四君子之一，象征虚心有节。"},
+{name:"银杏",scientific:"Ginkgo biloba",type:"乔木",climate:"温带",country:"中国",lat:34.34,lon:108.94,feature:"活化石植物，扇形叶片金黄美丽。"},
+{name:"红豆杉",scientific:"Taxus chinensis",type:"乔木",climate:"温带",country:"中国",lat:32.08,lon:118.80,feature:"国家一级保护植物，珍贵药用树种。"},
+{name:"水杉",scientific:"Metasequoia glyptostroboides",type:"乔木",climate:"亚热带",country:"中国",lat:30.67,lon:114.35,feature:"活化石植物，珍稀濒危物种。"},
+{name:"雪莲",scientific:"Saussurea involucrata",type:"草本",climate:"寒带",country:"中国",lat:43.10,lon:87.55,feature:"天山雪莲，生长在海拔3000米以上。"},
+{name:"人参",scientific:"Panax ginseng",type:"草本",climate:"温带",country:"中国",lat:41.80,lon:125.40,feature:"百草之王，珍贵中药材。"},
+{name:"珙桐",scientific:"Davidia involucrata",type:"乔木",climate:"亚热带",country:"中国",lat:28.21,lon:102.72,feature:"鸽子树，中国特有单种科植物。"},
+{name:"金花茶",scientific:"Camellia nitidissima",type:"灌木",climate:"热带",country:"中国",lat:22.25,lon:106.61,feature:"茶族皇后，世界珍稀花卉。"},
+{name:"铁皮石斛",scientific:"Dendrobium officinale",type:"草本",climate:"亚热带",country:"中国",lat:28.34,lon:120.48,feature:"九大仙草之首，名贵滋补品。"},
+{name:"桔梗",scientific:"Platycodon grandiflorus",type:"草本",climate:"温带",country:"中国",lat:38.05,lon:114.51,feature:"朝鲜族特色花卉，根可入药。"},
+{name:"报春花",scientific:"Primula malacoides",type:"草本",climate:"亚热带",country:"中国",lat:26.87,lon:100.23,feature:"世界三大高山花卉之一。"},
+{name:"龙胆",scientific:"Gentiana scabra",type:"草本",climate:"温带",country:"中国",lat:37.87,lon:112.55,feature:"高原花卉之王，蓝色花朵美丽。"},
+{name:"茶花",scientific:"Camellia japonica",type:"灌木",climate:"亚热带",country:"中国",lat:25.04,lon:102.71,feature:"花中娇客，世界著名花卉。"},
+// 美国 - 12种
+{name:"玫瑰",scientific:"Rosa rugosa",type:"灌木",climate:"温带",country:"美国",lat:38.90,lon:-77.04,feature:"爱情之花，全球最受欢迎的花卉。"},
+{name:"巨杉",scientific:"Sequoiadendron giganteum",type:"乔木",climate:"温带",country:"美国",lat:36.58,lon:-118.29,feature:"世界最大的树木，可长到100米高。"},
+{name:"红杉",scientific:"Sequoia sempervirens",type:"乔木",climate:"温带",country:"美国",lat:37.87,lon:-122.27,feature:"海岸红杉，世界上最高的树木。"},
+{name:"金盏菊",scientific:"Calendula officinalis",type:"草本",climate:"温带",country:"美国",lat:34.05,lon:-118.24,feature:"富含维生素，可食用和药用。"},
+{name:"仙人掌",scientific:"Cactaceae",type:"多肉",climate:"干旱",country:"美国",lat:32.73,lon:-117.16,feature:"沙漠植物，适应极端干旱环境。"},
+{name:"糖枫",scientific:"Acer saccharum",type:"乔木",climate:"温带",country:"美国",lat:43.65,lon:-70.26,feature:"加拿大国树，枫糖浆原料。"},
+{name:"花菱草",scientific:"Eschscholzia californica",type:"草本",climate:"地中海",country:"美国",lat:36.77,lon:-119.41,feature:"加州州花，橙黄色花朵。"},
+// 日本 - 8种
+{name:"樱花",scientific:"Prunus serrulata",type:"乔木",climate:"温带",country:"日本",lat:35.68,lon:139.69,feature:"日本国花，春天盛开象征生命短暂之美。"},
+{name:"红叶",scientific:"Acer palmatum",type:"乔木",climate:"温带",country:"日本",lat:35.01,lon:135.76,feature:"日本红枫，秋叶变红极其美丽。"},
+{name:"紫藤",scientific:"Wisteria floribunda",type:"藤本",climate:"温带",country:"日本",lat:34.73,lon:135.80,feature:"四大名藤之一，垂挂如紫色瀑布。"},
+{name:"山茶花",scientific:"Camellia japonica",type:"灌木",climate:"亚热带",country:"日本",lat:34.73,lon:135.80,feature:"椿花，冬春开花，花期长。"},
+// 法国/欧洲 - 10种
+{name:"薰衣草",scientific:"Lavandula angustifolia",type:"灌木",climate:"地中海",country:"法国",lat:46.23,lon:2.21,feature:"普罗旺斯象征，紫色花海闻名世界。"},
+{name:"橄榄",scientific:"Olea europaea",type:"乔木",climate:"地中海",country:"法国",lat:43.93,lon:7.26,feature:"和平象征，地中海特色树种。"},
+{name:"郁金香",scientific:"Tulipa gesneriana",type:"草本",climate:"温带",country:"法国",lat:52.37,lon:4.90,feature:"荷兰国花，球根花卉之王。"},
+{name:"风信子",scientific:"Hyacinthus orientalis",type:"草本",climate:"温带",country:"法国",lat:48.85,lon:2.35,feature:"春季球根花卉，香气浓郁。"},
+{name:"铃兰",scientific:"Convallaria majalis",type:"草本",climate:"温带",country:"法国",lat:48.85,lon:2.35,feature:"幸福归来，五月开花象征幸福。"},
+// 墨西哥 - 8种
+{name:"龙舌兰",scientific:"Agave americana",type:"多肉",climate:"干旱",country:"墨西哥",lat:23.63,lon:-102.55,feature:"酿酒原料，墨西哥国酒特基拉原料。"},
+{name:"巨人柱",scientific:"Carnegiea gigantea",type:"多肉",climate:"干旱",country:"墨西哥",lat:31.78,lon:-111.13,feature:"世界最高的仙人掌，可达20米。"},
+{name:"大丽花",scientific:"Dahlia pinnata",type:"草本",climate:"温带",country:"墨西哥",lat:19.43,lon:-99.13,feature:"墨西哥国花，花朵硕大艳丽。"},
+{name:"万寿菊",scientific:"Tagetes erecta",type:"草本",climate:"热带",country:"墨西哥",lat:20.66,lon:-103.35,feature:"亡灵节之花，金黄色象征死亡。"},
+// 巴西 - 8种
+{name:"巴西木",scientific:"Dracaena fragrans",type:"乔木",climate:"热带",country:"巴西",lat:-15.78,lon:-47.93,feature:"幸福之树，室内常见绿植。"},
+{name:"蝴蝶兰",scientific:"Phalaenopsis",type:"草本",climate:"热带",country:"巴西",lat:-23.55,lon:-46.63,feature:"洋兰皇后，高雅名贵花卉。"},
+{name:"凤梨",scientific:"Ananas comosus",type:"草本",climate:"热带",country:"巴西",lat:-3.11,lon:-60.03,feature:"热带水果之王，营养丰富。"},
+{name:"鸡蛋花",scientific:"Plumeria rubra",type:"乔木",climate:"热带",country:"巴西",lat:-13.16,lon:-72.55,feature:"热带七里香，香气宜人。"},
+// 南非 - 6种
+{name:"金合欢",scientific:"Acacia senegal",type:"乔木",climate:"热带",country:"南非",lat:-30.56,lon:22.94,feature:"非洲典型树种，金黄色球形花。"},
+{name:"猴面包树",scientific:"Adansonia digitata",type:"乔木",climate:"热带",country:"南非",lat:-22.56,lon:17.08,feature:"非洲生命之树，果实可食用。"},
+{name:"帝王花",scientific:"Protea cynaroides",type:"灌木",climate:"地中海",country:"南非",lat:-33.92,lon:18.42,feature:"南非国花，巨大的花序引人注目。"},
+{name:"鹤望兰",scientific:"Strelitzia reginae",type:"草本",climate:"热带",country:"南非",lat:-26.20,lon:28.04,feature:"天堂鸟，造型独特的热带花卉。"},
+// 澳大利亚 - 6种
+{name:"桉树",scientific:"Eucalyptus globulus",type:"乔木",climate:"亚热带",country:"澳大利亚",lat:-25.27,lon:133.78,feature:"考拉主食，澳大利亚代表树种。"},
+{name:"金合欢",scientific:"Acacia pycnantha",type:"乔木",climate:"亚热带",country:"澳大利亚",lat:-33.87,lon:151.21,feature:"澳大利亚国花，金黄色小球花。"},
+];
+
+// Three.js 场景
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.z = 2.8;
+
+const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.minDistance = 1.3;
+controls.maxDistance = 6;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.3;
+
+// 地球
+const earthGeo = new THREE.SphereGeometry(1, 128, 128);
+const earthMat = new THREE.MeshPhongMaterial({
+    color: 0x1e4d6b,
+    emissive: 0x0a1f30,
+    specular: 0x222222,
+    shininess: 25,
+});
+const earth = new THREE.Mesh(earthGeo, earthMat);
+scene.add(earth);
+
+// 大气层光晕
+const glowGeo = new THREE.SphereGeometry(1.06, 64, 64);
+const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x4fc3f7,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.BackSide
+});
+const glow = new THREE.Mesh(glowGeo, glowMat);
+scene.add(glow);
+
+// 外圈光晕
+const outerGlowGeo = new THREE.SphereGeometry(1.12, 64, 64);
+const outerGlowMat = new THREE.MeshBasicMaterial({
+    color: 0x2196F3,
+    transparent: true,
+    opacity: 0.03,
+    side: THREE.BackSide
+});
+const outerGlow = new THREE.Mesh(outerGlowGeo, outerGlowMat);
+scene.add(outerGlow);
+
+// 光照
+const ambient = new THREE.AmbientLight(0x404050, 1.2);
+scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xffffff, 1.3);
+sun.position.set(5, 3, 5);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x4488ff, 0.4);
+fill.position.set(-5, -3, -5);
+scene.add(fill);
+
+// 星空
+const starsGeo = new THREE.BufferGeometry();
+const starsPos = new Float32Array(3000*3);
+for(let i=0;i<starsPos.length;i++) starsPos[i] = (Math.random()-0.5)*100;
+starsGeo.setAttribute('position',new THREE.BufferAttribute(starsPos,3));
+const stars = new THREE.Points(starsGeo,new THREE.PointsMaterial({color:0xffffff,size:0.04,transparent:true,opacity:0.6}));
+scene.add(stars);
+
+// 标记
+const markerGroup = new THREE.Group();
+scene.add(markerGroup);
+
+const typeColors = {
+    '花卉': 0xFF6B6B,
+    '乔木': 0x4CAF50,
+    '灌木': 0xFFB347,
+    '多肉': 0x87CEEB,
+    '草本': 0xDDA0DD,
+    '藤本': 0x98D8C8
+};
+
+function createMarker(plant) {
+    const color = typeColors[plant.type] || 0xFFFFFF;
+    const group = new THREE.Group();
+    
+    // 外圈光晕
+    const glowGeo = new THREE.CircleGeometry(0.035, 24);
+    const glowMat = new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:0.35});
+    const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+    
+    // 内圈
+    const innerGeo = new THREE.CircleGeometry(0.018, 24);
+    const innerMat = new THREE.MeshBasicMaterial({color:0xffffff});
+    const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+    innerMesh.position.z = 0.001;
+    
+    // 脉冲圈
+    const pulseGeo = new THREE.RingGeometry(0.025, 0.035, 24);
+    const pulseMat = new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:0.5,side:THREE.DoubleSide});
+    const pulseMesh = new THREE.Mesh(pulseGeo, pulseMat);
+    
+    group.add(glowMesh, innerMesh, pulseMesh);
+    
+    // 经纬度转3D
+    const lat = plant.lat * Math.PI / 180;
+    const lon = -plant.lon * Math.PI / 180;
+    const r = 1.025;
+    group.position.set(r*Math.cos(lat)*Math.sin(lon), r*Math.sin(lat), r*Math.cos(lat)*Math.cos(lon));
+    group.lookAt(0,0,0);
+    group.rotateX(Math.PI/2);
+    
+    group.userData = {...plant, pulse: pulseMesh, baseOpacity: 0.5};
+    return group;
+}
+
+function updateMarkers() {
+    while(markerGroup.children.length) markerGroup.remove(markerGroup.children[0]);
+    
+    const tf = document.getElementById('typeFilter').value;
+    const cf = document.getElementById('climateFilter').value;
+    const cof = document.getElementById('countryFilter').value;
+    
+    let show = 0;
+    const countries = new Set();
+    
+    plantsData.forEach(p => {
+        if(tf!=='all'&&p.type!==tf) return;
+        if(cf!=='all'&&p.climate!==cf) return;
+        if(cof!=='all'&&p.country!==cof) return;
+        
+        markerGroup.add(createMarker(p));
+        countries.add(p.country);
+        show++;
+    });
+    
+    document.getElementById('totalCount').textContent = plantsData.length;
+    document.getElementById('showCount').textContent = show;
+    document.getElementById('countryCount').textContent = countries.size;
+}
+
+updateMarkers();
+document.getElementById('loading').style.display = 'none';
+
+['typeFilter','climateFilter','countryFilter'].forEach(id => {
+    document.getElementById(id).addEventListener('change', updateMarkers);
+});
+
+// 点击交互
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener('click', e => {
+    if(e.target.closest('#filters') || e.target.closest('#detail-panel') || e.target.closest('#legend')) return;
+    
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(markerGroup.children, true);
+    
+    if(hits.length) {
+        let marker = hits[0].object;
+        while(marker.parent && !marker.userData) marker = marker.parent;
+        
+        if(marker.userData) {
+            showDetail(marker.userData);
+            // 聚焦到该位置
+            const targetPos = marker.position.clone().normalize().multiplyScalar(2.5);
+            controls.target.copy(marker.position);
+        }
+    }
+});
+
+function showDetail(plant) {
+    document.getElementById('detailName').textContent = plant.name;
+    document.getElementById('detailScientific').textContent = plant.scientific;
+    document.getElementById('detailType').textContent = plant.type;
+    document.getElementById('detailClimate').textContent = plant.climate;
+    document.getElementById('detailCountry').textContent = plant.country;
+    document.getElementById('detailLocation').textContent = `纬度 ${plant.lat.toFixed(2)}° / 经度 ${plant.lon.toFixed(2)}°`;
+    document.getElementById('detailFeature').textContent = plant.feature;
+    document.getElementById('detail-panel').classList.add('active');
+}
+
+window.closeDetail = () => {
+    document.getElementById('detail-panel').classList.remove('active');
+    controls.target.set(0,0,0);
+};
+
+// 动画循环
+let time = 0;
+function animate() {
+    requestAnimationFrame(animate);
+    time += 0.01;
+    
+    // 脉冲动画
+    markerGroup.children.forEach(m => {
+        if(m.userData.pulse) {
+            m.userData.pulse.material.opacity = 0.3 + Math.sin(time * 2) * 0.2;
+        }
+    });
+    
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+
+// 窗口调整
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+    </script>
+</body>
+</html>
