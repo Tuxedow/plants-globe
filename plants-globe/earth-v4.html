@@ -174,7 +174,7 @@ const starsG=new THREE.BufferGeometry();
 const starsP=new Float32Array(2000*3);
 for(let i=0;i<starsP.length;i++)starsP[i]=(Math.random()-0.5)*80;
 starsG.setAttribute('position',new THREE.BufferAttribute(starsP,3));
-scene.add(new THREE.Points(starsG,new THREE.PointsMaterial({color:0xffffff,size:0.04,opacity:0.5,transparent:true})));
+scene.add(new THREE.Points(starsG,new THREE.PointsMaterial({color:0xffffff,size:0.04,opacity:0.5,transparent:true});
 
 // 标记
 const mkGroup=new THREE.Group();
@@ -184,8 +184,8 @@ const colors={'花卉':0xFF6B6B,'乔木':0x4CAF50,'灌木':0xFFB347,'多肉':0x8
 function mk(p){
     const c=colors[p.type]||0xFFFFFF;
     const g=new THREE.Group();
-    g.add(new THREE.Mesh(new THREE.CircleGeometry(0.03,16),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.5})));
-    g.add(new THREE.Mesh(new THREE.CircleGeometry(0.015,16),new THREE.MeshBasicMaterial({color:0xffffff})));
+    g.add(new THREE.Mesh(new THREE.CircleGeometry(0.03,16),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.5});
+    g.add(new THREE.Mesh(new THREE.CircleGeometry(0.015,16),new THREE.MeshBasicMaterial({color:0xffffff});
     const lat=p.lat*Math.PI/180,lon=-p.lon*Math.PI/180,r=1.01;
     g.position.set(r*Math.cos(lat)*Math.sin(lon),r*Math.sin(lat),r*Math.cos(lat)*Math.cos(lon));
     g.lookAt(0,0,0);g.rotateX(Math.PI/2);
