@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>全球植物分布</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{overflow:hidden;background:#000;font-family:-apple-system,BlinkMacSystemFont,sans-serif;touch-action:none}
+        #v{width:100vw;height:100vh;position:relative}
+        #t{position:absolute;top:15px;left:50%;transform:translateX(-50%);color:#fff;font-size:22px;font-weight:200;z-index:100;text-shadow:0 2px 10px rgba(0,0,0,0.8)}
+        #f{position:absolute;top:70px;left:0;background:rgba(10,15,25,0.95);padding:16px;border-radius:0 16px 16px 0;color:#fff;z-index:100;min-width:180px;transition:transform 0.3s;-webkit-tap-highlight-color:transparent}
+        #f.collapsed{transform:translateX(-140px)}
+        #bt{position:absolute;right:-28px;top:16px;width:28px;height:28px;background:rgba(10,15,25,0.95);border-radius:0 8px 8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#4CAF50;font-size:14px;-webkit-tap-highlight-color:transparent}
+        #f h3{margin:0 0 12px 0;font-size:12px;color:#4CAF50}
+        .g{margin-bottom:10px}
+        .g label{display:block;margin-bottom:4px;font-size:9px;color:#666;text-transform:uppercase}
+        .g select{width:100%;padding:8px;background:rgba(30,40,55,0.9);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:6px;font-size:12px}
+        #s{position:absolute;bottom:15px;left:15px;background:rgba(10,15,25,0.95);padding:12px 16px;border-radius:12px;color:#fff;z-index:100;display:flex;gap:16px}
+        #s .i{text-align:center}
+        #s .v{font-size:18px;font-weight:600;color:#4CAF50}
+        #s .l{font-size:9px;color:#666;text-transform:uppercase}
+        #lg{position:absolute;bottom:15px;right:15px;background:rgba(10,15,25,0.95);padding:12px 14px;border-radius:12px;color:#fff;z-index:100}
+        #lg h4{margin:0 0 8px 0;font-size:9px;color:#666;text-transform:uppercase}
+        .le{display:flex;align-items:center;margin:5px 0;font-size:11px}
+        .d{width:8px;height:8px;border-radius:50%;margin-right:6px}
+        #hi{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.35);font-size:10px;z-index:100}
+        #d{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,15,25,0.97);border-radius:16px;color:#fff;z-index:300;min-width:300px;display:none;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+        #d.active{display:block;animation:fade .3s}
+        @keyframes fade{from{opacity:0;transform:translate(-50%,-48%)}to{opacity:1;transform:translate(-50%,-50%)}}
+        .dh{padding:16px;border-bottom:1px solid rgba(255,255,255,0.08);position:relative}
+        .dh h2{font-size:20px;color:#4CAF50;margin:0}
+        .dh .sc{font-size:11px;color:rgba(255,255,255,0.5);font-style:italic}
+        .dc{position:absolute;top:12px;right:12px;width:26px;height:26px;background:rgba(255,255,255,0.1);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:#666}
+        .db{padding:14px}
+        .dr{display:flex;margin-bottom:8px}
+        .dr .l{width:40px;font-size:9px;color:#555;text-transform:uppercase}
+        .dr .v{font-size:12px}
+        .tg{display:inline-block;padding:2px 8px;background:rgba(76,175,80,0.2);border-radius:20px;font-size:10px;color:#4CAF50}
+        .df{margin-top:10px;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;border-left:2px solid #4CAF50}
+        .df .l{font-size:9px;color:#555}
+        .df .t{font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px}
+        #lo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#4CAF50;z-index:300}
+    </style>
+</head>
+<body>
+    <div id="v">
+        <div id="t">🌍 全球植物</div>
+        <div id="lo">加载中...</div>
+        
+        <div id="f">
+            <div id="bt" ontouchend="toggle()">◀</div>
+            <h3>🔍 筛选</h3>
+            <div class="g"><label>类型</label>
+                <select id="tf" onchange="up()"><option value="all">全部</option><option value="花卉">花卉</option><option value="乔木">乔木</option><option value="灌木">灌木</option><option value="多肉">多肉</option><option value="草本">草本</option></select>
+            </div>
+            <div class="g"><label>气候</label>
+                <select id="cf" onchange="up()"><option value="all">全部</option><option value="温带">温带</option><option value="热带">热带</option><option value="亚热带">亚热带</option><option value="地中海">地中海</option></select>
+            </div>
+            <div class="g"><label>国家</label>
+                <select id="cof" onchange="up()"><option value="all">全部</option><option value="中国">中国</option><option value="美国">美国</option><option value="日本">日本</option><option value="法国">法国</option></select>
+            </div>
+        </div>
+        
+        <div id="s">
+            <div class="i"><div class="v" id="tt">0</div><div class="l">总数</div></div>
+            <div class="i"><div class="v" id="ss">0</div><div class="l">显示</div></div>
+        </div>
+        
+        <div id="lg">
+            <h4>类型</h4>
+            <div class="le"><div class="d" style="background:#FF6B6B"></div>花卉</div>
+            <div class="le"><div class="d" style="background:#4CAF50"></div>乔木</div>
+            <div class="le"><div class="d" style="background:#FFB347"></div>灌木</div>
+            <div class="le"><div class="d" style="background:#87CEEB"></div>多肉</div>
+            <div class="le"><div class="d" style="background:#DDA0DD"></div>草本</div>
+        </div>
+        
+        <div id="hi">👆 拖拽旋转 · 点击详情</div>
+        
+        <div id="d">
+            <div class="dh">
+                <h2 id="dn">名称</h2>
+                <div class="sc" id="ds">学名</div>
+                <div class="dc" ontouchend="closeD()">×</div>
+            </div>
+            <div class="db">
+                <div class="dr"><div class="l">类型</div><div class="v"><span class="tg" id="dt">类型</span></div></div>
+                <div class="dr"><div class="l">气候</div><div class="v" id="dc">气候</div></div>
+                <div class="dr"><div class="l">分布</div><div class="v" id="do">国家</div></div>
+                <div class="df"><div class="l">特征</div><div class="t" id="df">描述</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+    <script type="module">
+import*as THREE from'three';
+import{OrbitControls}from'three/addons/controls/OrbitControls.js';
+
+const dt=[
+{name:"桂花",sci:"Osmanthus",type:"乔木",cli:"温带",con:"中国",lat:35.86,lon:104.19,feat:"中国名花"},
+{name:"牡丹",sci:"Paeonia",type:"灌木",cli:"温带",con:"中国",lat:34.74,lon:113.62,feat:"中国国花"},
+{name:"梅花",sci:"Prunus",type:"乔木",cli:"温带",con:"中国",lat:34.34,lon:108.94,feat:"岁寒三友"},
+{name:"兰花",sci:"Cymbidium",type:"草本",cli:"亚热带",con:"中国",lat:30.57,lon:114.3,feat:"十大名花"},
+{name:"菊花",sci:"Chrysanthemum",type:"草本",cli:"温带",con:"中国",lat:39.9,lon:116.41,feat:"四君子"},
+{name:"杜鹃",sci:"Rhododendron",type:"灌木",cli:"亚热带",con:"中国",lat:27.83,lon:112.94,feat:"高山花卉"},
+{name:"荷花",sci:"Nelumbo",type:"草本",cli:"温带",con:"中国",lat:30.57,lon:114.3,feat:"出淤泥不染"},
+{name:"竹子",sci:"Bambusa",type:"乔木",cli:"亚热带",con:"中国",lat:29.56,lon:106.55,feat:"四君子"},
+{name:"银杏",sci:"Ginkgo",type:"乔木",cli:"温带",con:"中国",lat:34.34,lon:108.94,feat:"活化石"},
+{name:"樱花",sci:"Prunus",type:"乔木",cli:"温带",con:"日本",lat:35.68,lon:139.69,feat:"日本国花"},
+{name:"红叶",sci:"Acer",type:"乔木",cli:"温带",con:"日本",lat:35.01,lon:135.76,feat:"日本红枫"},
+{name:"薰衣草",sci:"Lavandula",type:"灌木",cli:"地中海",con:"法国",lat:46.23,lon:2.21,feat:"普罗旺斯"},
+{name:"橄榄",sci:"Olea",type:"乔木",cli:"地中海",con:"法国",lat:43.93,lon:7.26,feat:"和平象征"},
+{name:"龙舌兰",sci:"Agave",type:"多肉",cli:"干旱",con:"墨西哥",lat:23.63,lon:-102.55,feat:"酿酒原料"},
+{name:"巨人柱",sci:"Carnegiea",type:"多肉",cli:"干旱",con:"墨西哥",lat:31.78,lon:-111.13,feat:"最高仙人掌"},
+{name:"玫瑰",sci:"Rosa",type:"灌木",cli:"温带",con:"美国",lat:38.9,lon:-77.04,feat:"爱情之花"},
+];
+
+const sc=new THREE.Scene();
+const ca=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,1000);
+ca.position.z=2.5;
+
+const re=new THREE.WebGLRenderer({antialias:true});
+re.setSize(innerWidth,innerHeight);
+re.setPixelRatio(Math.min(devicePixelRatio,1.5));
+document.getElementById('v').appendChild(re.domElement);
+
+const ct=new OrbitControls(ca,re.domElement);
+ct.enableDamping=true;
+ct.dampingFactor=0.05;
+ct.minDistance=1.5;
+ct.maxDistance=5;
+ct.autoRotate=true;
+ct.autoRotateSpeed=0.3;
+
+const eg=new THREE.Group();
+sc.add(eg);
+
+const earth=new THREE.Mesh(new THREE.SphereGeometry(1,48,48),new THREE.MeshPhongMaterial({color:0x1e90ff,specular:0x111111,shininess:5}));
+eg.add(earth);
+
+const atmo=new THREE.Mesh(new THREE.SphereGeometry(1.03,48,48),new THREE.MeshBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.15,side:THREE.BackSide}));
+eg.add(atmo);
+
+sc.add(new THREE.AmbientLight(0x404050,1));
+const su=new THREE.DirectionalLight(0xffffff,1);
+su.position.set(5,3,5);
+sc.add(su);
+
+const sg=new THREE.BufferGeometry();
+const sp=new Float32Array(1500*3);
+for(let i=0;i<sp.length;i++)sp[i]=(Math.random()-0.5)*60;
+sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
+sc.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:0.05,opacity:0.5,transparent:true});
+
+const mg=new THREE.Group();
+eg.add(mg);
+const cl={'花卉':0xFF6B6B,'乔木':0x4CAF50,'灌木':0xFFB347,'多肉':0x87CEEB,'草本':0xDDA0DD};
+
+function mk(p){
+    const c=cl[p.type]||0xFFFFFF;
+    const g=new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.CircleGeometry(0.025,12),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.6});
+    g.add(new THREE.Mesh(new THREE.CircleGeometry(0.012,12),new THREE.MeshBasicMaterial({color:0xffffff});
+    const la=p.lat*Math.PI/180,lo=-p.lon*Math.PI/180,r=1.01;
+    g.position.set(r*Math.cos(la)*Math.sin(lo),r*Math.sin(la),r*Math.cos(la)*Math.cos(lo));
+    g.lookAt(0,0,0);g.rotateX(Math.PI/2);
+    g.userData=p;
+    return g;
+}
+
+function up(){
+    while(mg.children.length)mg.remove(mg.children[0]);
+    const tf=document.getElementById('tf').value,cf=document.getElementById('cf').value,cof=document.getElementById('cof').value;
+    let n=0;
+    dt.forEach(p=>{if((tf==='all'||p.type===tf)&&(cf==='all'||p.cli===cf)&&(cof==='all'||p.con===cof)){mg.add(mk(p));n++}});
+    document.getElementById('tt').innerText=dt.length;
+    document.getElementById('ss').innerText=n;
+}
+up();
+
+window.toggle=()=>{const f=document.getElementById('f'),b=document.getElementById('bt');f.classList.toggle('collapsed');b.innerText=f.classList.contains('collapsed')?'▶':'◀'};
+
+const ry=new THREE.Raycaster();
+function ck(x,y){
+    ry.setFromCamera(new THREE.Vector2((x/innerWidth)*2-1,-(y/innerHeight)*2+1),ca);
+    const hs=ry.intersectObjects(mg.children,true);
+    if(hs.length){let m=hs[0].object;while(m.parent&&!m.userData)m=m.parent;if(m.userData)show(m.userData)}
+}
+re.domElement.ontouchend=e=>{
+    if(e.target.closest('#f')||e.target.closest('#d')||e.target.closest('#lg'))return;
+    const t=e.changedTouches[0];ck(t.clientX,t.clientY);
+};
+
+function show(p){
+    document.getElementById('dn').innerText=p.name;
+    document.getElementById('ds').innerText=p.sci;
+    document.getElementById('dt').innerText=p.type;
+    document.getElementById('dc').innerText=p.cli;
+    document.getElementById('do').innerText=p.con;
+    document.getElementById('df').innerText=p.feat;
+    document.getElementById('d').classList.add('active');
+}
+window.closeD=()=>document.getElementById('d').classList.remove('active');
+
+document.getElementById('lo').style.display='none';
+
+function an(){requestAnimationFrame(an);ct.update();re.render(sc,ca);}
+an();
+
+addEventListener('resize',()=>{ca.aspect=innerWidth/innerHeight;ca.updateProjectionMatrix();re.setSize(innerWidth,innerHeight)});
+    </script>
+</body>
+</html>
